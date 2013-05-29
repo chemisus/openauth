@@ -1,6 +1,8 @@
 <?php
 
-namespace OpenAuth;
+namespace OpenAuth\Common;
+
+use OpenAuth\Redirectable;
 
 class Redirector implements Redirectable
 {

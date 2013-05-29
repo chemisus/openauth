@@ -1,6 +1,9 @@
 <?php
 
-namespace OpenAuth;
+namespace OpenAuth\Common;
+
+use OpenAuth\RequestGet;
+use OpenAuth\RequestPost;
 
 class Curl implements RequestGet, RequestPost
 {
