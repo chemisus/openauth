@@ -104,8 +104,6 @@ class GoogleOpenAuth implements ResourceProvider, UserAgent, TokenInitializer, T
 
         if ($code === null) {
             $this->authorize();
-
-            throw new AuthorizeRedirectException();
         }
 
         $fields = [
