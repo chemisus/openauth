@@ -1,0 +1,20 @@
+{
+    "name": "chemisus/openauth",
+    "description": "Open Auth",
+    "minimum-stability": "dev",
+    "authors": [
+        {
+            "name": "Terrence Howard",
+            "email": "chemisus@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-0": {
+            "OpenAuth": "src/"
+        }
+    },
+    "require-dev": {
+        "mockery/mockery": "*",
+        "phpunit/phpunit": "*"
+    }
+}
