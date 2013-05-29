@@ -2,6 +2,8 @@
 
 namespace OpenAuth\Common;
 
+use Exception;
+use OpenAuth\Exception\TokenErrorException;
 use OpenAuth\Token;
 use OpenAuth\TokenFactory;
 
@@ -17,6 +19,10 @@ class JsonTokenFactory implements TokenFactory
     public function make($value, $refresh_code = null)
     {
         $object = json_decode($value);
+
+        if (isset($object->error)) {
+            throw new TokenErrorException();
+        }
 
         if ($refresh_code !== null) {
             $object->refresh_code = $refresh_code;

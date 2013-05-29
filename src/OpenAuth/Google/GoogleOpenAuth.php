@@ -2,17 +2,17 @@
 
 namespace OpenAuth\Google;
 
+use OpenAuth\CodeProvider;
 use OpenAuth\Exception\AuthorizeRedirectException;
+use OpenAuth\Redirectable;
+use OpenAuth\RequestGet;
+use OpenAuth\RequestPost;
 use OpenAuth\ResourceProvider;
-use OpenAuth\UserAgent;
+use OpenAuth\Token;
+use OpenAuth\TokenFactory;
 use OpenAuth\TokenInitializer;
 use OpenAuth\TokenRefresher;
-use OpenAuth\Token;
-use OpenAuth\RequestPost;
-use OpenAuth\RequestGet;
-use OpenAuth\TokenFactory;
-use OpenAuth\CodeProvider;
-use OpenAuth\Redirectable;
+use OpenAuth\UserAgent;
 
 class GoogleOpenAuth implements ResourceProvider, UserAgent, TokenInitializer, TokenRefresher
 {
@@ -42,30 +42,58 @@ class GoogleOpenAuth implements ResourceProvider, UserAgent, TokenInitializer, T
      */
     private $redirect;
 
-    public function __construct(RequestGet $request_get,
-                                RequestPost $request_post,
-                                Redirectable $redirect,
-                                TokenFactory $token_factory,
-                                CodeProvider $code_provider)
-    {
+    private $token_uri = 'https://accounts.google.com/o/oauth2/token';
+
+    private $auth_uri = 'https://accounts.google.com/o/oauth2/auth';
+
+    private $redirect_uri;
+
+    private $client_id;
+
+    private $client_secret;
+
+    private $scope;
+
+    public function __construct(
+        RequestGet $request_get,
+        RequestPost $request_post,
+        Redirectable $redirect,
+        TokenFactory $token_factory,
+        CodeProvider $code_provider,
+        $redirect_uri,
+        $client_id,
+        $client_secret,
+        array $scope = []
+    ) {
         $this->code_provider = $code_provider;
         $this->request_get   = $request_get;
         $this->token_factory = $token_factory;
         $this->request_post  = $request_post;
         $this->redirect      = $redirect;
+        $this->redirect_uri  = $redirect_uri;
+        $this->client_id     = $client_id;
+        $this->scope         = implode(' ', $scope);
+        $this->client_secret = $client_secret;
     }
 
     public function resource(Token $token, $uri)
     {
-        $uri = 'https://accounts.google.com/o/oauth2/auth
-        ?redirect_uri=https://developers.google.com/oauthplayground
-        &response_type=code
-        &client_id=407408718192.apps.googleusercontent.com
-        &approval_prompt=force
-        &scope=https://www.googleapis.com/auth/userinfo.profile
-        &access_type=offline';
+        $headers = [
+            'Authorization: OAuth ' . $token->tokenValue(),
+        ];
 
-        $headers = [];
+        $fields = [
+            'client_id'       => $this->client_id,
+            'redirect_uri'    => $this->redirect_uri,
+            'scope'           => $this->scope,
+            'response_type'   => 'code',
+            'approval_prompt' => 'force',
+            'access_type'     => 'offline',
+        ];
+
+        $querystring = http_build_query($fields);
+
+        $location = $uri . '?' . $querystring;
 
         return json_decode($this->request_get->get($uri, $headers));
     }
@@ -81,11 +109,11 @@ class GoogleOpenAuth implements ResourceProvider, UserAgent, TokenInitializer, T
         }
 
         $fields = [
-            'client_id'     => '407408718192.apps.googleusercontent.com',
-            'client_secret' => '************',
+            'client_id'     => $this->client_id,
+            'redirect_uri'  => $this->redirect_uri,
+            'client_secret' => $this->client_secret,
             'grant_type'    => 'authorization_code',
             'code'          => $code,
-            'redirect_uri'  => 'https://developers.google.com/oauthplayground',
             'scope'         => '',
         ];
 
@@ -96,27 +124,38 @@ class GoogleOpenAuth implements ResourceProvider, UserAgent, TokenInitializer, T
 
     public function authorize()
     {
-        $uri = '';
+        $uri = $this->auth_uri;
 
-        $this->redirect->redirect($uri);
+        $fields = [
+            'client_id'       => $this->client_id,
+            'redirect_uri'    => $this->redirect_uri,
+            'scope'           => $this->scope,
+            'response_type'   => 'code',
+            'approval_prompt' => 'force',
+            'access_type'     => 'offline',
+        ];
+
+        $querystring = http_build_query($fields);
+
+        $location = $uri . '?' . $querystring;
+
+        $this->redirect->redirect($location);
     }
 
     public function fetchToken(array $fields = [])
     {
-        $uri = 'https://accounts.google.com/o/oauth2/token';
+        $uri = $this->token_uri;
 
-        $headers = [];
-
-        return $this->request_post->post($uri, $fields, $headers);
+        return $this->request_post->post($uri, $fields);
     }
 
     public function refreshToken(Token $token)
     {
         $fields = [
-            'client_id'     => '407408718192.apps.googleusercontent.com',
-            'client_secret' => '',
+            'client_id'     => $this->client_id,
+            'client_secret' => $this->client_secret,
+            'refresh_token' => $token->refreshCode(),
             'grant_type'    => 'refresh_token',
-            'refresh_token' => '1/SAJMGoDQSQ62XdJ-1QktM2KkjrYbFXKsjoT5fcZI7vM',
         ];
 
         $object = $this->fetchToken($fields);
